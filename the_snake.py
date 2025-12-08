@@ -31,7 +31,7 @@ DEFAULT_COLOR = (0, 0, 0)
 # Позиция по-умолчанию
 DEFAULT_X_POSITION = 0
 DEFAULT_Y_POSITION = 0
-DEFAULT_POSITION = [0, 0]
+DEFAULT_POSITION = (DEFAULT_X_POSITION, DEFAULT_Y_POSITION)
 
 # Цвет яблока
 APPLE_COLOR = (255, 0, 0)
@@ -57,7 +57,7 @@ class GameObject:
     Базовый класс для игрового объекта.
 
     Атрибуты:
-    - position (list): позиция объекта на плоскости в формате [x, y].
+    - position (tuple): позиция объекта на плоскости в формате (x, y).
     - body_color (tuple): цвет объекта в формате (R, G, B).
 
     Методы:
@@ -72,7 +72,14 @@ class GameObject:
 
     def draw(self):
         """Метод для отрисовки объекта. По умолчанию ничего не делает."""
-        raise NotImplementedError()
+
+    def _draw_cell(self, pos: tuple[int, int], color: tuple[int, int, int]):
+        position_x, position_y = pos
+        left = position_x * GRID_SIZE
+        top = position_y * GRID_SIZE
+        rect = pg.Rect(left, top, GRID_SIZE, GRID_SIZE)
+        pg.draw.rect(screen, color, rect)
+        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
 
 class Snake(GameObject):
@@ -122,15 +129,7 @@ class Snake(GameObject):
     def draw(self):
         """Рисует змейки на экране."""
         for position in self.positions:
-            self._draw_cell(position)
-
-    def _draw_cell(self, position):
-        position_x, position_y = position
-        left = position_x * GRID_SIZE
-        top = position_y * GRID_SIZE
-        rect = pg.Rect(left, top, GRID_SIZE, GRID_SIZE)
-        pg.draw.rect(screen, self.body_color, rect)
-        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+            self._draw_cell(position, color=self.body_color)
 
     def grow(self):
         """Устанавливает флаг для роста змейки при следующем движении."""
@@ -169,9 +168,7 @@ class Snake(GameObject):
             return False
         head_position = self.get_head_position()
         tail_positions = self.positions[1:]
-        if head_position in tail_positions:
-            return True
-        return False
+        return head_position in tail_positions
 
     def update_direction(self):
         """Обновляет направление движения змейки."""
@@ -197,31 +194,30 @@ class Apple(GameObject):
     - draw(): рисует яблоко на экране.
     """
 
-    def __init__(self, color=APPLE_COLOR, restricted_cells=[]):
+    def __init__(self, color=APPLE_COLOR, restricted_cells=None):
         """Инициализирует новый экземпляр яблока."""
         super().__init__()
-        self.position = []
         self.body_color = color
+        if restricted_cells is None:
+            restricted_cells = []
         self.randomize_position(restricted_cells)
 
     def randomize_position(self, restricted_cells: list[tuple[int, int]]):
+        """Устанавливает случайную позицию яблока на игровом поле."""
+        self.position = self._get_random_position(restricted_cells)
+
+    def _get_random_position(self, restricted_cells: list[tuple[int, int]]):
         """Устанавливает случайную позицию яблока на игровом поле."""
         while True:
             x = randint(0, GRID_WIDTH - 1)
             y = randint(0, GRID_HEIGHT - 1)
             position = (x, y)
             if position not in restricted_cells:
-                self.position = position
-                return
+                return position
 
     def draw(self):
         """Рисует яблоко на экране."""
-        apple_position_x, apple_position_y = self.position
-        left = apple_position_x * GRID_SIZE
-        top = apple_position_y * GRID_SIZE
-        rect = pg.Rect(left, top, GRID_SIZE, GRID_SIZE)
-        pg.draw.rect(screen, self.body_color, rect)
-        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+        self._draw_cell(self.position, self.body_color)
 
 
 def handle_keys(game_object):
@@ -266,7 +262,7 @@ def main():
     """
     pg.init()
 
-    snake = Snake(GRID_WIDTH // 2 * GRID_SIZE, GRID_HEIGHT // 2 * GRID_SIZE)
+    snake = Snake(GRID_WIDTH // 2, GRID_HEIGHT // 2)
     apple = Apple(restricted_cells=snake.positions)
 
     # Цикл одной игры
