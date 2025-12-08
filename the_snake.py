@@ -89,7 +89,7 @@ class Snake(GameObject):
     Наследуется от класса GameObject.
 
     Атрибуты:
-    - start_position (list): начальная позиция змейки.
+    - start_position (tuple): начальная позиция змейки.
     - body_color (tuple): цвет тела змейки.
     - position (list): текущая позиция змейки.
     - positions (list): список позиций сегментов змейки.
